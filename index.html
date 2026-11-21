@@ -110,6 +110,13 @@ dialog[open]{animation:sheet 320ms var(--ease)}
 .ci.solo{max-height:340px}
 .oi{height:64px;max-width:45%;object-fit:contain;border-radius:8px;margin-right:12px}
 .face{overflow-wrap:anywhere}
+.tb{border-collapse:collapse;font-size:.85rem;font-weight:500;margin:10px auto 0;max-width:100%}
+.face .tb{font-size:.62em;width:100%}
+.tb td,.tb th{border:1px solid var(--ln);padding:.4em .6em;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere}
+.tb th{background:color-mix(in srgb,var(--ac) 12%,transparent);font-weight:700}
+.te{background:var(--bg);border-radius:14px;padding:12px;margin-top:10px}
+.tg{display:grid;gap:6px;overflow-x:auto;margin-top:8px}.tg .tc{margin:0;padding:10px}.tg .th{font-weight:700}
+dialog{max-height:92dvh;overflow:auto}
 </style>
 </head>
 <body>
@@ -147,7 +154,7 @@ const lev=(a,b)=>{const m=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;
 function img(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{const k=Math.min(1,900/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*k);c.height=Math.round(i.height*k);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(i,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.75))};i.onerror=rej;i.src=r.result};r.onerror=rej;r.readAsDataURL(file)})}
 let EI={f:'',b:''};/* Bilder im Bearbeiten-Dialog */
 const im=(u,solo)=>u?`<img class="ci${solo?' solo':''}" src="${u}" alt="" draggable="false">`:'';
-const imgs=(o,k)=>['f','b'].map(x=>`<label class="btn" style="margin:0">${o[x]?'Bild '+(x==='f'?'vorne':'hinten')+' ändern':'+ Bild '+(x==='f'?'vorne':'hinten')}<input type="file" accept="image/*" id="${k}${x}" hidden></label>${o[x]?`<span class="th"><img src="${o[x]}" alt=""><button class="ib" data-a="rmimg" data-id="${k}${x}" aria-label="Bild entfernen">✕</button></span>`:''}`).join('');
+const imgs0=(o,k)=>['f','b'].map(x=>`<label class="btn" style="margin:0">${o[x]?'Bild '+(x==='f'?'vorne':'hinten')+' ändern':'+ Bild '+(x==='f'?'vorne':'hinten')}<input type="file" accept="image/*" id="${k}${x}" hidden></label>${o[x]?`<span class="th"><img src="${o[x]}" alt=""><button class="ib" data-a="rmimg" data-id="${k}${x}" aria-label="Bild entfernen">✕</button></span>`:''}`).join('');
 /* ===== Anki-Import (.apkg): ZIP- und SQLite-Bibliothek werden nur bei Bedarf von cdnjs geladen ===== */
 const CDN='https://cdnjs.cloudflare.com/ajax/libs/',MIME={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',svg:'image/svg+xml'};
 const lib=u=>new Promise((ok,no)=>{const x=document.createElement('script');x.src=CDN+u;x.onload=ok;x.onerror=()=>no();document.head.appendChild(x)});
@@ -179,8 +186,20 @@ ask('Import fertig',`<p>${n} Karten in ${ids.length} Stapel${ids.length>1?'n':''
 function fit(el){el.style.fontSize='';el.style.justifyContent='flex-start';const bad=()=>el.scrollHeight>el.clientHeight+1;if(bad()){let lo=14,hi=parseFloat(getComputedStyle(el).fontSize);while(hi-lo>.5){const m=(lo+hi)/2;el.style.fontSize=m+'px';bad()?hi=m:lo=m}el.style.fontSize=lo+'px'}el.style.justifyContent=''}
 const fitAll=()=>document.querySelectorAll('.face:not(.solo)').forEach(fit);
 addEventListener('resize',fitAll);
+/* ===== Tabellen auf Karten: {h:1 = erste Zeile Überschrift, r:[[Zelle,…],…]} ===== */
+let ET={f:null,b:null},OE={k:'',x:''};/* ET = Tabellen im Bearbeiten-Dialog, OE = gerade geöffneter Tabellen-Editor */
+const TO=k=>k==='p'?V.pt:ET,IO=k=>k==='p'?V.pi:EI;
+const hasT=t=>!!(t&&t.r&&t.r.some(r=>r.some(c=>String(c).trim())));
+const tb=t=>hasT(t)?`<table class="tb">${t.r.map((r,i)=>`<tr>${r.map(c=>i===0&&t.h?`<th>${e(c)}</th>`:`<td>${e(c)}</td>`).join('')}</tr>`).join('')}</table>`:'';
+function ted(k){if(OE.k!==k)return'';const x=OE.x,t=TO(k)[x];if(!t)return'';
+return `<div class="te"><b>Tabelle ${x==='f'?'vorne':'hinten'}</b><div class="tg" style="grid-template-columns:repeat(${t.r[0].length},minmax(84px,1fr))">${t.r.map((r,i)=>r.map((c,j)=>`<input class="tc${i===0&&t.h?' th':''}" data-t="${k}${x}" data-r="${i}" data-c="${j}" value="${e(c)}" aria-label="Zeile ${i+1}, Spalte ${j+1}" autocomplete="off">`).join('')).join('')}</div>
+<div class="row wrap" style="margin-top:8px"><button class="btn" data-a="top" data-id="ar">+ Zeile</button><button class="btn" data-a="top" data-id="ac">+ Spalte</button><button class="btn" data-a="top" data-id="dr">− Zeile</button><button class="btn" data-a="top" data-id="dc">− Spalte</button></div>
+<label class="row" style="margin:10px 0 0"><input type="checkbox" id="thd" ${t.h?'checked':''} style="width:auto;margin:0"> Erste Zeile als Überschrift</label>
+<div class="row wrap" style="margin-top:8px"><button class="btn" data-a="tdel">Tabelle entfernen</button><button class="btn pri" data-a="tdone">Fertig</button></div></div>`}
+function trf(k){$('#'+k+'e').innerHTML=ted(k);$(k==='p'?'#pv':'#xv').innerHTML=imgs(IO(k),k)}
+const imgs=(o,k)=>imgs0(o,k)+['f','b'].map(x=>`<button class="btn" data-a="tbl" data-id="${k}${x}">▦ ${TO(k)[x]?'Tabelle '+(x==='f'?'vorne':'hinten')+' bearbeiten':'+ Tabelle '+(x==='f'?'vorne':'hinten')}</button>`).join('');
 /* ===== Zustand & Rendering ===== */
-const V={v:'home',id:null,q:'',o:{shuf:0,swap:0,star:0},pi:{f:'',b:''}};let ST=null;
+const V={v:'home',id:null,q:'',o:{shuf:0,swap:0,star:0},pi:{f:'',b:''},pt:{f:null,b:null}};let ST=null;
 function R(){$('#app').innerHTML=V.v==='home'?home():V.v==='deck'?dview():'<div class="sv">'+sview()+'</div>';if(V.v==='study'&&ST&&ST.mode==='write'&&!ST.res){const i=$('#wi');if(i)i.focus()}fitAll()}
 
 function home(){const t=today(),wd=['So','Mo','Di','Mi','Do','Fr','Sa'],bars=[...Array(7)].map((_,i)=>[t-6+i,S.days[t-6+i]||0]),mx=Math.max(1,...bars.map(b=>b[1]));
@@ -191,7 +210,7 @@ return `<header class="top"><h1>Karten</h1><button class="ib" data-a="theme" ari
 ${S.decks.length?`<div class="grid">${S.decks.map(d=>`<button class="deck" style="--c:${d.color}" data-a="open" data-id="${d.id}"><b>${e(d.name)}</b><small>${e(d.desc)||'&nbsp;'}</small><div class="row"><div class="bar"><i style="width:${pct(d)}%"></i></div><small>${pct(d)}%</small></div><small>${mast(d)} von ${d.cards.length} gemeistert · ${due(d)} fällig</small></button>`).join('')}</div>`:`<div class="empty"><h2>Noch keine Stapel</h2><p>Erstelle deinen ersten Stapel und leg los!</p></div>`}`}
 
 const lst=d=>{const q=(V.q||'').toLowerCase(),cs=d.cards.filter(c=>!q||(c.f+' '+c.b).toLowerCase().includes(q));
-return cs.length?cs.map(c=>`<div class="item"><button class="ib${c.star?' on':''}" data-a="star" data-id="${c.id}" aria-label="Markieren">${c.star?'★':'☆'}</button>${c.fi||c.bi?`<img class="th2" src="${c.fi||c.bi}" alt="">`:''}<div class="tx"><b>${e(c.f)||'Bild'}</b><span>${e(c.b)||'Bild'}</span></div><i class="lv" title="Level ${c.lv}">${'●'.repeat(c.lv)}${'○'.repeat(5-c.lv)}</i><button class="ib" data-a="editcard" data-id="${c.id}" aria-label="Bearbeiten">✎</button><button class="ib" data-a="delcard" data-id="${c.id}" aria-label="Löschen">${IC.trash}</button></div>`).join(''):`<div class="empty"><p>${d.cards.length?'Nichts gefunden.':'Noch keine Karten – erstelle deine erste!'}</p></div>`};
+return cs.length?cs.map(c=>`<div class="item"><button class="ib${c.star?' on':''}" data-a="star" data-id="${c.id}" aria-label="Markieren">${c.star?'★':'☆'}</button>${c.fi||c.bi?`<img class="th2" src="${c.fi||c.bi}" alt="">`:''}<div class="tx"><b>${e(c.f)||(c.ft?'Tabelle':'Bild')}</b><span>${e(c.b)||(c.bt?'Tabelle':'Bild')}</span></div><i class="lv" title="Level ${c.lv}">${'●'.repeat(c.lv)}${'○'.repeat(5-c.lv)}</i><button class="ib" data-a="editcard" data-id="${c.id}" aria-label="Bearbeiten">✎</button><button class="ib" data-a="delcard" data-id="${c.id}" aria-label="Löschen">${IC.trash}</button></div>`).join(''):`<div class="empty"><p>${d.cards.length?'Nichts gefunden.':'Noch keine Karten – erstelle deine erste!'}</p></div>`};
 
 function dview(){const d=deck(V.id),o=V.o,ch=(k,t)=>`<button class="chip${o[k]?' on':''}" data-a="opt" data-id="${k}">${t}</button>`;
 return `<header class="top"><button class="ib" data-a="home" aria-label="Zurück">‹</button><h1 style="--c:${d.color}">${e(d.name)}</h1><button class="ib" data-a="editdeck" aria-label="Stapel bearbeiten">✎</button></header>
@@ -200,32 +219,32 @@ ${d.desc?`<p class="mu">${e(d.desc)}</p>`:''}
 <button class="btn pri big fab" style="margin:0" data-a="study" data-m="cards">Lernen · ${due(d)} fällig</button>
 <div class="row wrap" style="margin-top:10px"><button class="btn" data-a="study" data-m="cards" data-all="1">Alle Karten</button>${d.cards.some(c=>c.w)?`<button class="btn" data-a="study" data-m="cards" data-w="1">Nicht gewusste (${d.cards.filter(c=>c.w).length})</button>`:''}<button class="btn" data-a="study" data-m="write">Schreiben</button><button class="btn" data-a="study" data-m="mc">Quiz</button></div>
 <div class="row wrap" style="margin-top:10px">${ch('shuf','Mischen')}${ch('swap','⇄ Seiten tauschen')}${ch('star','★ Nur markierte')}</div></div>
-<h3>Neue Karte</h3><div class="box"><label>Vorderseite<input id="af" placeholder="Frage / Begriff" autocomplete="off"></label><label>Rückseite<input id="ab" placeholder="Antwort / Definition" autocomplete="off"></label><div class="row wrap" id="pv" style="margin-bottom:10px">${imgs(V.pi,'p')}</div><button class="btn pri big" style="margin:0" data-a="addcard">Karte hinzufügen</button><p class="hint">Enter = nächstes Feld · Strg+Enter = speichern</p></div>
+<h3>Neue Karte</h3><div class="box"><label>Vorderseite<input id="af" placeholder="Frage / Begriff" autocomplete="off"></label><label>Rückseite<input id="ab" placeholder="Antwort / Definition" autocomplete="off"></label><div class="row wrap" id="pv" style="margin-bottom:10px">${imgs(V.pi,'p')}</div><div id="pe">${ted('p')}</div><button class="btn pri big" style="margin:0" data-a="addcard">Karte hinzufügen</button><p class="hint">Enter = nächstes Feld · Strg+Enter = speichern</p></div>
 <div class="row" style="margin-top:20px"><h3 style="flex:1;margin:0">Karten</h3><button class="btn" data-a="import">Import</button><button class="btn" data-a="expcsv">CSV</button><button class="btn" data-a="expjson">JSON</button></div>
 <input id="sq" type="search" placeholder="Suchen …" value="${e(V.q)}" style="margin-bottom:4px"><div id="list" class="grp">${lst(d)}</div>`}
 
 /* ===== Lernmodus ===== */
-function cur(){const d=deck(V.id),c=d.cards.find(x=>x.id===ST.q[0]),sw=V.o.swap;return{d,c,qf:sw?c.b:c.f,af:sw?c.f:c.b,qi:sw?c.bi:c.fi,ai:sw?c.fi:c.bi}}
+function cur(){const d=deck(V.id),c=d.cards.find(x=>x.id===ST.q[0]),sw=V.o.swap;return{d,c,qf:sw?c.b:c.f,af:sw?c.f:c.b,qi:sw?c.bi:c.fi,ai:sw?c.fi:c.bi,qt:sw?c.bt:c.ft,at:sw?c.ft:c.bt}}
 function start(mode,all,ids){const d=deck(V.id),t=today(),o=V.o;let p=d.cards.filter(c=>ids?ids.includes(c.id):!o.star||c.star);
 if(mode==='cards'&&!all&&!ids)p=p.filter(c=>c.due<=t);
 if(mode==='write')p=p.filter(c=>o.swap?c.f:c.b);/* Schreiben braucht Text auf der Antwortseite */
 if(mode==='mc'&&d.cards.length<3)return toast('Für das Quiz brauchst du mindestens 3 Karten.');
 if(!p.length)return toast(!d.cards.length?'Füge zuerst Karten hinzu.':o.star&&!ids?'Keine markierten Karten.':'Heute ist nichts fällig – nutze „Alle Karten“.');
 o.shuf?shuf(p):p.sort((a,b)=>a.lv-b.lv); /* niedriges Level zuerst */
-ST={mode,q:p.map(c=>c.id),total:p.length,ok:0,no:0,miss:[],flip:false,res:null,val:''};V.v='study';R()}
+ST={mode,q:p.map(c=>c.id),total:p.length,ok:0,no:0,miss:[],flip:false,res:null,val:''};V.v='study';R();scrollTo(0,0)}
 function answer(ok){const s=ST;if(!s||!s.q.length)return;const d=deck(V.id),id=s.q.shift(),c=d.cards.find(x=>x.id===id);
 if(ok){s.ok++;c.k=true;c.w=false;c.lv=Math.min(5,c.lv+1)}else{s.no++;c.k=false;c.w=true;c.lv=1;s.miss.push(id)} /* jede Karte nur einmal pro Runde; c.w = zuletzt nicht gewusst */
 c.due=today()+IV[c.lv];if(navigator.vibrate)navigator.vibrate(ok?8:[8,40,8]);S.days[today()]=(S.days[today()]||0)+1;s.flip=false;s.res=null;s.val='';s.busy=false;save();R()}
 function fly(r){if(ST.busy)return;ST.busy=true;const dr=$('#drag');dr.style.transition='transform 240ms var(--ease),opacity 240ms';dr.style.transform=`translateX(${r?'120vw':'-120vw'}) rotate(${r?18:-18}deg)`;dr.style.opacity=0;setTimeout(()=>answer(r),200)}
 
-function sview(){const s=ST,d=deck(V.id);if(!s.q.length)return result(d);const{c,qf,af,qi,ai}=cur(),done=s.total-s.q.length;
+function sview(){const s=ST,d=deck(V.id);if(!s.q.length)return result(d);const{c,qf,af,qi,ai,qt,at}=cur(),done=s.total-s.q.length;
 const top=`<header class="top"><button class="ib" data-a="quit" aria-label="Beenden">✕</button><div class="prog"><div class="bar"><i style="width:${done/s.total*100}%"></i></div></div><b class="cnt" style="white-space:nowrap">Karte ${Math.min(done+1,s.total)} von ${s.total}</b></header><div class="live"><span class="g">✓ ${s.ok} gewusst</span><span class="r">✗ ${s.no} nicht gewusst</span></div>`;
 const tools=`<div class="tools"><button class="ib${c.star?' on':''}" data-a="star" data-id="${c.id}" aria-label="Markieren">${c.star?'★':'☆'}</button><button class="ib" data-a="speak" aria-label="Vorlesen">${IC.spk}</button></div>`;
 let b='';
-if(s.mode==='cards')b=`<div class="stage"><div class="drag" id="drag"><div class="card${s.flip?' flip':''}" id="card"><div class="face${!qf&&qi?' solo':''}">${im(qi,!qf)}${e(qf)}</div><div class="face back${!af&&ai?' solo':''}">${im(ai,!af)}${e(af)}</div></div></div></div>${tools}<div class="ans${s.flip?' show':''}" id="ans"><button class="btn nay" data-a="no">✗ Nicht gewusst</button><button class="btn yes" data-a="yes">Gewusst ✓</button></div><p class="hint">Tippen = umdrehen · Wischen oder ←/→ · Leertaste</p>`;
-else if(s.mode==='write'){const r=s.res;b=`<div class="panel"><small>Frage</small>${im(qi,!qf)}${qf?`<div class="big">${e(qf)}</div>`:''}</div>${tools}<input id="wi" placeholder="Deine Antwort" autocomplete="off" autocapitalize="off" spellcheck="false" value="${e(s.val)}" ${r?'disabled':''}>${r?`<p class="fb ${r.ok?'g':'r'}">${r.ok?(r.close?'✓ Fast richtig – korrekt: '+e(af):'✓ Richtig!'):'✗ Richtig wäre: '+e(af)}</p><div class="row2">${r.ok?'':'<button class="btn" data-a="force">Trotzdem richtig</button>'}<button class="btn pri" data-a="next" style="${r.ok?'grid-column:1/3':''}">Weiter</button></div>`:'<button class="btn pri big" data-a="check">Prüfen</button>'}`}
-else{if(s.oid!==c.id){const sw=V.o.swap;s.opts=shuf([c,...shuf(d.cards.filter(x=>x.id!==c.id&&((sw?x.f:x.b)||(sw?x.fi:x.bi))&&(!af||(sw?x.f:x.b)!==af)).filter((x,i,a)=>!(sw?x.f:x.b)||a.findIndex(y=>(sw?y.f:y.b)===(sw?x.f:x.b))===i)).slice(0,3)]);s.oid=c.id}
-b=`<div class="panel"><small>Frage</small>${im(qi,!qf)}${qf?`<div class="big">${e(qf)}</div>`:''}</div>${tools}<div class="col">${s.opts.map((o,i)=>{const w=V.o.swap,ot=w?o.f:o.b,oi=w?o.fi:o.bi;return `<button class="btn opt${s.res?(o.id===c.id?' good':i===s.res.pick?' wrong':''):''}" data-a="pick" data-id="${i}" ${s.res?'disabled':''}>${oi?`<img class="oi" src="${oi}" alt="">`:''}${e(ot)}</button>`}).join('')}</div>${s.res?'<button class="btn pri big" data-a="next">Weiter</button>':''}`}
+if(s.mode==='cards')b=`<div class="stage"><div class="drag" id="drag"><div class="card${s.flip?' flip':''}" id="card"><div class="face${!qf&&qi&&!qt?' solo':''}">${im(qi,!qf&&!qt)}${e(qf)}${tb(qt)}</div><div class="face back${!af&&ai&&!at?' solo':''}">${im(ai,!af&&!at)}${e(af)}${tb(at)}</div></div></div></div>${tools}<div class="ans${s.flip?' show':''}" id="ans"><button class="btn nay" data-a="no">✗ Nicht gewusst</button><button class="btn yes" data-a="yes">Gewusst ✓</button></div><p class="hint">Tippen = umdrehen · Wischen oder ←/→ · Leertaste</p>`;
+else if(s.mode==='write'){const r=s.res;b=`<div class="panel"><small>Frage</small>${im(qi,!qf&&!qt)}${qf?`<div class="big">${e(qf)}</div>`:''}${tb(qt)}</div>${tools}<input id="wi" placeholder="Deine Antwort" autocomplete="off" autocapitalize="off" spellcheck="false" value="${e(s.val)}" ${r?'disabled':''}>${r?`<p class="fb ${r.ok?'g':'r'}">${r.ok?(r.close?'✓ Fast richtig – korrekt: '+e(af):'✓ Richtig!'):'✗ Richtig wäre: '+e(af)}</p><div class="row2">${r.ok?'':'<button class="btn" data-a="force">Trotzdem richtig</button>'}<button class="btn pri" data-a="next" style="${r.ok?'grid-column:1/3':''}">Weiter</button></div>`:'<button class="btn pri big" data-a="check">Prüfen</button>'}`}
+else{if(s.oid!==c.id){const sw=V.o.swap;s.opts=shuf([c,...shuf(d.cards.filter(x=>x.id!==c.id&&((sw?x.f:x.b)||(sw?x.fi:x.bi)||(sw?x.ft:x.bt))&&(!af||(sw?x.f:x.b)!==af)).filter((x,i,a)=>!(sw?x.f:x.b)||a.findIndex(y=>(sw?y.f:y.b)===(sw?x.f:x.b))===i)).slice(0,3)]);s.oid=c.id}
+b=`<div class="panel"><small>Frage</small>${im(qi,!qf&&!qt)}${qf?`<div class="big">${e(qf)}</div>`:''}${tb(qt)}</div>${tools}<div class="col">${s.opts.map((o,i)=>{const w=V.o.swap,ot=w?o.f:o.b,oi=w?o.fi:o.bi;return `<button class="btn opt${s.res?(o.id===c.id?' good':i===s.res.pick?' wrong':''):''}" data-a="pick" data-id="${i}" ${s.res?'disabled':''}>${oi?`<img class="oi" src="${oi}" alt="">`:''}${e(ot||(!oi&&(w?o.ft:o.bt)?'Tabelle':''))}</button>`}).join('')}</div>${s.res?'<button class="btn pri big" data-a="next">Weiter</button>':''}`}
 return top+b}
 
 function result(d){const s=ST,p=Math.round((s.total-s.miss.length)/s.total*100),hard=s.miss.map(id=>d.cards.find(c=>c.id===id)).filter(Boolean);
@@ -237,18 +256,22 @@ function deckForm(id){const d=id?deck(id):null,col=d?d.color:COL[S.decks.length%
 ask(d?'Stapel bearbeiten':'Neuer Stapel',`<label>Name<input id="dn" maxlength="60" value="${e(d?.name)}" placeholder="z. B. Englisch Vokabeln"></label><label>Beschreibung (optional)<input id="dd" maxlength="140" value="${e(d?.desc)}"></label><label>Sprache zum Vorlesen<select id="dl">${LANGS.map(([k,n])=>`<option value="${k}"${(d?.lang||'de-DE')===k?' selected':''}>${n}</option>`).join('')}</select></label><div class="sw">${COL.map(c=>`<label><input type="radio" name="dc" value="${c}"${c===col?' checked':''} aria-label="Farbe ${c}"><i style="background:${c}"></i></label>`).join('')}</div>${d?'<button class="btn bad" data-del>Stapel löschen</button>':''}`,'Speichern',()=>{const n=$('#dn').value.trim();if(!n){toast('Bitte gib einen Namen ein.');return false}
 const v={name:n,desc:$('#dd').value.trim(),lang:$('#dl').value,color:$('input[name=dc]:checked').value};if(d)Object.assign(d,v);else{const nd={id:uid(),cards:[],...v};S.decks.push(nd);Object.assign(V,{v:'deck',id:nd.id,q:''})}save();R()});
 const b=$('#dlg [data-del]');if(b)b.onclick=()=>ask('Stapel löschen?',`<p>„${e(d.name)}“ und alle ${d.cards.length} Karten werden endgültig gelöscht.</p>`,'Löschen',()=>{S.decks=S.decks.filter(x=>x!==d);save();Object.assign(V,{v:'home'});R()},true)}
-function cardForm(c){EI={f:c.fi||'',b:c.bi||''};ask('Karte bearbeiten',`<label>Vorderseite<textarea id="ef" rows="2">${e(c.f)}</textarea></label><label>Rückseite<textarea id="eb" rows="3">${e(c.b)}</textarea></label><div class="row wrap" id="xv">${imgs(EI,'x')}</div>`,'Speichern',()=>{const f=$('#ef').value.trim(),b=$('#eb').value.trim();if((!f&&!EI.f)||(!b&&!EI.b)){toast('Jede Seite braucht Text oder ein Bild.');return false}Object.assign(c,{f,b,fi:EI.f,bi:EI.b});save();R()})}
-function addCard(){const d=deck(V.id),f=$('#af').value.trim(),b=$('#ab').value.trim(),p=V.pi;if((!f&&!p.f)||(!b&&!p.b)){toast('Jede Seite braucht Text oder ein Bild.');(f||p.f?$('#ab'):$('#af')).focus();return}
-d.cards.push({id:uid(),f,b,fi:p.f,bi:p.b,lv:1,due:today(),star:false});V.pi={f:'',b:''};save();R();$('#af').focus()}
+function cardForm(c){EI={f:c.fi||'',b:c.bi||''};ET={f:c.ft?JSON.parse(JSON.stringify(c.ft)):null,b:c.bt?JSON.parse(JSON.stringify(c.bt)):null};OE={k:'',x:''};ask('Karte bearbeiten',`<label>Vorderseite<textarea id="ef" rows="2">${e(c.f)}</textarea></label><label>Rückseite<textarea id="eb" rows="3">${e(c.b)}</textarea></label><div class="row wrap" id="xv">${imgs(EI,'x')}</div><div id="xe"></div>`,'Speichern',()=>{const f=$('#ef').value.trim(),b=$('#eb').value.trim(),ft=hasT(ET.f)?ET.f:null,bt=hasT(ET.b)?ET.b:null;if((!f&&!EI.f&&!ft)||(!b&&!EI.b&&!bt)){toast('Jede Seite braucht Text, ein Bild oder eine Tabelle.');return false}Object.assign(c,{f,b,fi:EI.f,bi:EI.b,ft,bt});OE={k:'',x:''};save();R()})}
+function addCard(){const d=deck(V.id),f=$('#af').value.trim(),b=$('#ab').value.trim(),p=V.pi,t=V.pt,ft=hasT(t.f)?t.f:null,bt=hasT(t.b)?t.b:null;if((!f&&!p.f&&!ft)||(!b&&!p.b&&!bt)){toast('Jede Seite braucht Text, ein Bild oder eine Tabelle.');(f||p.f||ft?$('#ab'):$('#af')).focus();return}
+d.cards.push({id:uid(),f,b,fi:p.f,bi:p.b,ft,bt,lv:1,due:today(),star:false});V.pi={f:'',b:''};V.pt={f:null,b:null};OE={k:'',x:''};save();R();$('#af').focus()}
 const A={
 theme(){const o=['','light','dark'],i=(o.indexOf(S.theme)+1)%3;S.theme=o[i];theme();save();toast('Darstellung: '+['Automatisch','Hell','Dunkel'][i])},
 home(){window.speechSynthesis&&speechSynthesis.cancel();Object.assign(V,{v:'home'});R()},
-open(id){Object.assign(V,{v:'deck',id,q:'',pi:{f:'',b:''}});R()},
+open(id){Object.assign(V,{v:'deck',id,q:'',pi:{f:'',b:''},pt:{f:null,b:null}});OE={k:'',x:''};R()},
 newdeck(){deckForm()},editdeck(){deckForm(V.id)},
 opt(k,t){V.o[k]=V.o[k]?0:1;t.classList.toggle('on',!!V.o[k])},
 study(_,t){const d=deck(V.id);start(t.dataset.m,t.dataset.all==='1',t.dataset.w?d.cards.filter(c=>c.w).map(c=>c.id):undefined)},
 addcard:addCard,
 editcard(id){cardForm(deck(V.id).cards.find(c=>c.id===id))},
+tbl(id){const k=id[0],x=id[1],t=TO(k);if(OE.k===k&&OE.x===x)OE={k:'',x:''};else{if(!t[x])t[x]={h:1,r:[['',''],['',''],['','']]};OE={k,x}}trf(k)},
+top(op){const{k,x}=OE,t=TO(k)[x],C=t.r[0].length;if(op==='ar')t.r.push(Array(C).fill(''));else if(op==='ac')t.r.forEach(r=>r.push(''));else if(op==='dr'&&t.r.length>1)t.r.pop();else if(op==='dc'&&C>1)t.r.forEach(r=>r.pop());trf(k)},
+tdel(){const{k,x}=OE;TO(k)[x]=null;OE={k:'',x:''};trf(k)},
+tdone(){const{k}=OE;OE={k:'',x:''};trf(k)},
 rmimg(id){const o=id[0]==='p'?V.pi:EI;o[id[1]]='';$(id[0]==='p'?'#pv':'#xv').innerHTML=imgs(o,id[0])},
 delcard(id){const d=deck(V.id);ask('Karte löschen?','<p>Diese Karte wird endgültig gelöscht.</p>','Löschen',()=>{d.cards=d.cards.filter(c=>c.id!==id);save();R()},true)},
 star(id,t){const c=deck(V.id).cards.find(x=>x.id===id);c.star=!c.star;save();t.textContent=c.star?'★':'☆';t.classList.toggle('on',c.star)},
@@ -289,6 +312,8 @@ const rel=()=>{if(!P)return;const{dr,dx}=P;P=null;if(Math.abs(dx)<8){dr.style.tr
 document.addEventListener('pointerup',rel);document.addEventListener('pointercancel',rel);
 document.addEventListener('change',async ev=>{const id=ev.target.id;if(!/^[px][fb]$/.test(id)||!ev.target.files[0])return;const o=id[0]==='p'?V.pi:EI;try{o[id[1]]=await img(ev.target.files[0])}catch(_){toast('Bild konnte nicht geladen werden.');return}$(id[0]==='p'?'#pv':'#xv').innerHTML=imgs(o,id[0])});
 document.addEventListener('change',ev=>{if(ev.target.id==='apk'&&ev.target.files[0]){apkg(ev.target.files[0]);ev.target.value=''}});
+document.addEventListener('input',ev=>{const d=ev.target.dataset;if(d&&d.t){TO(d.t[0])[d.t[1]].r[+d.r][+d.c]=ev.target.value}});
+document.addEventListener('change',ev=>{if(ev.target.id==='thd'){TO(OE.k)[OE.x].h=ev.target.checked?1:0;trf(OE.k)}});
 theme();R();
 </script>
 </body>
